@@ -33,7 +33,7 @@ export const criarUsuario = async (usuario) =>{
 };
 
 //ler todos (snapshot em tempo real)
-export const subscribeProdutos = (callback) => {
+export const subscribeUsuario = (callback) => {
     const q = query(usuarioCollection, orderBy("createdAt", "desc"));
     return onSnapshot(q, (snapshot)=>{
         const itens = snapshot.docs.map((d) => ({id: d.id, ...d.data()}));

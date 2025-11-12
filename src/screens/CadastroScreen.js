@@ -1,10 +1,12 @@
 import { Alert, Button, Platform, StyleSheet, Text, TextInput, View } from "react-native";
+import ListUsers from "./ListUsers";
 import React, { useEffect, useState, } from "react";
 import { criarUsuario } from "../service/ProdutosService";
 import api from "../service/api";
 
 
-export default function CadastroScreen() {
+export default function CadastroScreen({ route, navigation }) {
+  const idUsuario = route?.params?.idUsuario || null;
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
   const [cpf, setCpf] = useState("");
@@ -13,6 +15,8 @@ export default function CadastroScreen() {
   const [bairro, setBairro] = useState("");
   const [uf, setUF] = useState("");
 
+
+
   const handlerCadastro = async () => {
     if (nome === "" || telefone === "" || cpf === "" || logradouro === "" || bairro === "" || cidade === "" || uf === "") {
       Platform.OS === "web"
@@ -20,7 +24,7 @@ export default function CadastroScreen() {
         : Alert.alert("Erro!", "Por favor, preencha todos os campos.");
       return;
     }
-
+  
     const novo = {
       nome,
       telefone,
@@ -30,12 +34,20 @@ export default function CadastroScreen() {
       cidade,
       uf,
     };
-
+  
     try {
-      const id = await criarUsuario(novo);
-      Platform.OS === "web"
-        ? window.alert("Usuario cadastrado com sucesso!")
-        : Alert.alert("Sucesso!", "Usuario cadastrado com sucesso!");
+      if (idUsuario) {
+        await atualizarProduto(idUsuario, novo);
+        Platform.OS === "web"
+          ? window.alert("Usuário atualizado com sucesso!")
+          : Alert.alert("Sucesso!", "Usuário atualizado com sucesso!");
+      } else {
+        const id = await criarUsuario(novo);
+        Platform.OS === "web"
+          ? window.alert("Usuário cadastrado com sucesso!")
+          : Alert.alert("Sucesso!", "Usuário cadastrado com sucesso!");
+      }
+
       setNome("");
       setTelefone("");
       setCpf("");
@@ -44,12 +56,13 @@ export default function CadastroScreen() {
       setCidade("");
       setUF("");
     } catch (error) {
-      console.error("Erro ao cadastrar usuario", error);
+      console.error("Erro ao salvar usuário", error);
       Platform.OS === "web"
-        ? window.alert("Erro ao cadastrar usuario. Tente novamente")
-        : Alert.alert("Erro!", "Erro ao cadastrar usuario. Tente novamente");
+        ? window.alert("Erro ao salvar usuário. Tente novamente.")
+        : Alert.alert("Erro!", "Erro ao salvar usuário. Tente novamente.");
     }
   };
+  
   return (
 
     <View style={styles.container}>

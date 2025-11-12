@@ -43,7 +43,7 @@ export default function DetalhesScreen({route, navigation}) {
     }, []);
 
     const handleAtualizar = async () => {
-      if (!nome || !preco || !descricao){
+      if (nome === "" || telefone === "" || cpf === "" || logradouro === "" || bairro === "" || cidade === "" || uf === ""){
         Platform.OS ==="web"
         ?window.alert("Preencha todos os campos antes de atualizar! ")
         : Alert.alert("Aviso", "Preencha todos os campos antes de atualizar! ");
@@ -114,9 +114,7 @@ export default function DetalhesScreen({route, navigation}) {
 
 
   if(loading) return <ActivityIndicator style={{flex:1}} size="large" />;
-    // Platform.OS ==="web"
-    //   ? window.alert("Lista de produtos vazia")
-    //   :Alert.alert("Erro!", "Lista de produtos vazia" );  
+
 
   return (
 
