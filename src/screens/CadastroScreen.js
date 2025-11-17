@@ -1,148 +1,227 @@
-import { Alert, Button, Platform, StyleSheet, Text, TextInput, View } from "react-native";
-import ListUsers from "./ListUsers";
-import React, { useEffect, useState, } from "react";
-import { criarUsuario } from "../service/ProdutosService";
-import api from "../service/api";
-
+import { Platform, StyleSheet, Text, View, Button, TextInput, Alert, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { criarUsuario, obterProdutosPorId, atualizarpPoduto } from '../service/ProdutosService';
 
 export default function CadastroScreen({ route, navigation }) {
   const idUsuario = route?.params?.idUsuario || null;
-  const [nome, setNome] = useState("");
-  const [telefone, setTelefone] = useState("");
-  const [cpf, setCpf] = useState("");
-  const [logradouro, setLogradouro] = useState("");
-  const [cidade, setCidade] = useState("");
-  const [bairro, setBairro] = useState("");
-  const [uf, setUF] = useState("");
 
+  const [nome, setNome] = useState('');
+  const [telefone, setTelefone] = useState('');
+  const [CPF, setCPF] = useState('');
+  const [cep, setCep] = useState('');
+  const [logradouro, setLogradouro] = useState('');
+  const [bairro, setBairro] = useState('');
+  const [cidade, setCidade] = useState('');
+  const [UF, setUF] = useState('');
+  const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (idUsuario) {
+      const fetchUsuario = async () => {
+        setLoading(true);
+        try {
+          const usuario = await obterProdutosPorId(idUsuario);
+          if (usuario) {
+            setNome(usuario.nome || '');
+            setTelefone(usuario.telefone || '');
+            setCPF(usuario.cpf || '');
+            setCep(usuario.cep || '');
+            setLogradouro(usuario.logradouro || '');
+            setBairro(usuario.bairro || '');
+            setCidade(usuario.cidade || '');
+            setUF(usuario.uf || '');
+          }
+        } catch (error) {
+          console.error("Erro ao carregar dados para edição:", error);
+          Alert.alert("Erro!", "Erro ao carregar dados para edição.");
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchUsuario();
+    }
+  }, [idUsuario]);
 
-  const handlerCadastro = async () => {
-    if (nome === "" || telefone === "" || cpf === "" || logradouro === "" || bairro === "" || cidade === "" || uf === "") {
-      Platform.OS === "web"
-        ? window.alert("Por favor, preencha todos os campos.")
-        : Alert.alert("Erro!", "Por favor, preencha todos os campos.");
+  const buscarCep = async () => {
+    if (cep.length !== 8) {
+      if (cep.length > 0) {
+        Platform.OS === 'web'
+          ? window.alert('Por favor, insira um CEP válido com 8 dígitos!')
+          : Alert.alert('Erro!', 'Por favor, insira um CEP válido com 8 dígitos!');
+      }
       return;
     }
-  
-    const novo = {
+
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data = await response.json();
+
+      if (!data.erro) {
+        setLogradouro(data.logradouro || '');
+        setBairro(data.bairro || '');
+        setCidade(data.localidade || '');
+        setUF(data.uf || '');
+      } else {
+        Platform.OS === 'web' ? window.alert('CEP não encontrado!') : Alert.alert('Erro!', 'CEP não encontrado!');
+      }
+    } catch (error) {
+      console.error('Erro ao buscar CEP:', error);
+      Platform.OS === 'web' ? window.alert('Erro ao consultar o CEP!') : Alert.alert('Erro!', 'Erro ao consultar o CEP!');
+    }
+  };
+
+  const handlerCadastro = async () => {
+    if (nome === '' || CPF === '' || logradouro === '') {
+      Platform.OS === 'web'
+        ? window.alert('Por favor, preencha os campos obrigatórios (Nome, CPF, Logradouro)!')
+        : Alert.alert('Erro!', 'Por favor, preencha os campos obrigatórios (Nome, CPF, Logradouro)!');
+      return;
+    }
+
+    if (!idUsuario && cep === '') {
+      Platform.OS === 'web'
+        ? window.alert('CEP é obrigatório para novos cadastros!')
+        : Alert.alert('Erro!', 'CEP é obrigatório para novos cadastros!');
+      return;
+    }
+
+
+    const dadosUsuario = {
       nome,
       telefone,
-      cpf,
+      cpf: CPF,
+      cep,
       logradouro,
       bairro,
       cidade,
-      uf,
+      uf: UF,
     };
-  
+
     try {
       if (idUsuario) {
-        await atualizarProduto(idUsuario, novo);
-        Platform.OS === "web"
-          ? window.alert("Usuário atualizado com sucesso!")
-          : Alert.alert("Sucesso!", "Usuário atualizado com sucesso!");
+        await atualizarpPoduto(idUsuario, dadosUsuario);
+        Platform.OS === 'web' ? window.alert('Usuário atualizado com sucesso!') : Alert.alert('Sucesso!', 'Usuário atualizado com sucesso!');
+        navigation.goBack();
       } else {
-        const id = await criarUsuario(novo);
-        Platform.OS === "web"
-          ? window.alert("Usuário cadastrado com sucesso!")
-          : Alert.alert("Sucesso!", "Usuário cadastrado com sucesso!");
+        await criarUsuario(dadosUsuario);
+        Platform.OS === 'web' ? window.alert('Usuário cadastrado com sucesso!') : Alert.alert('Sucesso!', 'Usuário cadastrado com sucesso!');
       }
 
-      setNome("");
-      setTelefone("");
-      setCpf("");
-      setLogradouro("");
-      setBairro("");
-      setCidade("");
-      setUF("");
+      if (!idUsuario) {
+        setNome('');
+        setTelefone('');
+        setCPF('');
+        setCep('');
+        setLogradouro('');
+        setBairro('');
+        setCidade('');
+        setUF('');
+      }
     } catch (error) {
-      console.error("Erro ao salvar usuário", error);
-      Platform.OS === "web"
-        ? window.alert("Erro ao salvar usuário. Tente novamente.")
-        : Alert.alert("Erro!", "Erro ao salvar usuário. Tente novamente.");
+      console.error(`Erro ao ${idUsuario ? 'atualizar' : 'cadastrar'} o usuário`, error);
+      Platform.OS === 'web' ? window.alert(`Erro ao ${idUsuario ? 'atualizar' : 'cadastrar'} o usuário.`) : Alert.alert('Erro!', `Erro ao ${idUsuario ? 'atualizar' : 'cadastrar'} o usuário.`);
     }
   };
-  
-  return (
 
+  const buttonTitle = idUsuario ? "Atualizar" : "Cadastrar";
+
+  if (idUsuario && loading) {
+    return <ActivityIndicator style={styles.container} size="large" color="#0000ff" />;
+  }
+
+  return (
     <View style={styles.container}>
-      <Text style={styles.styleText}>Nome</Text>
+      <Text style={styles.label}>Nome Completo *</Text>
       <TextInput
-        style={styles.input}
         value={nome}
         onChangeText={setNome}
-        placeholder="Digite o nome completo"
+        placeholder="Digite seu nome completo"
+        style={styles.input}
       />
 
-      <Text style={styles.styleText}>Telefone</Text>
+      <Text style={styles.label}>Telefone</Text>
       <TextInput
-        style={styles.input}
         value={telefone}
         onChangeText={setTelefone}
-        placeholder="Digite o telefone"
+        placeholder="(xx) xxxxx-xxxx"
+        keyboardType="numeric"
+        style={styles.input}
       />
 
-      <Text style={styles.styleText}>CPF</Text>
+      <Text style={styles.label}>CPF *</Text>
       <TextInput
+        value={CPF}
+        onChangeText={setCPF}
+        keyboardType="numeric"
+        placeholder="xxx.xxx.xxx-xx"
         style={styles.input}
-        value={cpf}
-        onChangeText={setCpf}
-        placeholder="Digite o CPF"
       />
 
-      <Text style={styles.styleText}>Logradouro</Text>
+      <Text style={styles.label}>CEP *</Text>
       <TextInput
+        value={cep}
+        onChangeText={setCep}
+        keyboardType="numeric"
+        placeholder="Digite o CEP"
         style={styles.input}
+        onBlur={buscarCep}
+      />
+
+      <Text style={styles.label}>Logradouro *</Text>
+      <TextInput
         value={logradouro}
         onChangeText={setLogradouro}
-        placeholder="Logradouro"
+        placeholder="Digite o seu endereço"
+        style={styles.input}
       />
 
-      <Text style={styles.styleText}>Bairro</Text>
+      <Text style={styles.label}>Bairro</Text>
       <TextInput
-        style={styles.input}
         value={bairro}
         onChangeText={setBairro}
-        placeholder="Bairro"
+        placeholder="Digite seu bairro"
+        style={styles.input}
       />
 
-      <Text style={styles.styleText}>Cidade</Text>
+      <Text style={styles.label}>Cidade</Text>
       <TextInput
-        style={styles.input}
         value={cidade}
         onChangeText={setCidade}
-        placeholder="Cidade"
-      />
-
-      <Text style={styles.styleText}>UF(Estado)</Text>
-      <TextInput
+        placeholder="Digite sua cidade"
         style={styles.input}
-        value={uf}
-        onChangeText={setUF}
-        placeholder="Estado(UF)"
       />
-      <Button title="Cadastrar" onPress={handlerCadastro} />
 
+      <Text style={styles.label}>UF</Text>
+      <TextInput
+        value={UF}
+        onChangeText={setUF}
+        placeholder="UF"
+        style={styles.input}
+      />
+
+      <Button title={buttonTitle} onPress={handlerCadastro} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
     flex: 1,
-    backgroundColor: "#f0f0f0"
+    padding: 20,
+    backgroundColor: "#f0f0f0",
   },
-  styleText: {
-    marginBottom: 5,
-    marginTop: 15
+  label: {
+    fontWeight: 'bold',
+    marginTop: 10,
+    color: '#333',
   },
   input: {
     height: 40,
-    borderColor: "gray",
     borderWidth: 1,
+    borderColor: '#555',
+    borderRadius: 5,
     paddingHorizontal: 10,
     marginBottom: 10,
-    borderRadius: 5
+    backgroundColor: "#fff",
   },
 });
